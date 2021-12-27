@@ -40,7 +40,7 @@ def prepare_input(filename):
         n_days = len(days)
 
         # check if values are valid.
-        check_data(members_id, days, n_days, y, squad, shift_off)
+        check_data(members_id, n_members, days, n_days, y, squad, shift_off)
 
         members_info = (members_id, n_members, squad)
         date_info = (days, n_days, shift_off)
@@ -48,29 +48,40 @@ def prepare_input(filename):
         return x_table, y, members_info, date_info
 
     except:
-        raise TypeError('輸入的 Excel 檔案格式不符，請修正後重新執行程式')
+        raise TypeError('輸入的 Excel 檔案格式不符，或內容確認不正確，請修正後重新執行程式')
 
 
-def check_data(members_id, days, n_days, y, squad, shift_off):
+def check_data(members_id, n_members, days, n_days, y, squad, shift_off):
     # check if values are integers.
     for value in (members_id+days):
         if not isinstance(value, int):
-            raise ValueError('隊員的番號、日期應為整數，請修正後重新執行程式')
+            raise ValueError('隊員的番號、日期應為整數')
 
     # check if the values in '應值宿' & '應救護'
     # match the number of days of this month.
     sum_y = y.sum(axis=0)
-    if sum_y[0] != n_days or sum_y[1] != n_days*2:
-        raise ValueError('應值宿或應救護的次數與天數不符，請修正後重新執行程式')
+    if sum_y[0] != n_days:
+        raise ValueError('「應值宿」的次數與此月天數不符')
+    if sum_y[1] != n_days*2:
+        raise ValueError('「應救護」的次數與此月天數不符')
 
     # check if the days are consective integers
     for i in range(n_days-1):
         if days[i]+1 != days[i+1]:
-            raise ValueError('請將此月的每一天都列在 Excel 表中，請修正後重新執行程式')
+            raise ValueError('請將此月的每一天都列在 Excel 表中')
 
     # check if the dayoff squad everyday is one of the squads.
     if not set(shift_off).issubset(set(squad)):
-        raise ValueError('每日輪休的班別，與隊員的班別不一致，請修正後重新執行程式')
+        raise ValueError('每日輪休的班別，與隊員的班別不一致')
+
+    # show member and day info for user confirm
+    print('\n-----\n\n\n【資料確認】\n')
+    print(f'輸入的番號：{members_id}，共 {n_members} 人')
+    print(f'規劃的天數：{days}，共 {n_days} 天')
+    confirm = input('\n以上內容是否正確？\n\n請輸入「正確」以繼續：\n--> ')
+    if confirm != '正確':
+        raise InterruptedError('已取消後續規劃，請重新執行程式')
+    print('\n\n-----\n')
 
 
 def solution_to_df(input, D, E):
