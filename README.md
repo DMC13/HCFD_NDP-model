@@ -58,7 +58,7 @@ Special thanks to:<br>
 <br><br>
 
 
-## Get Involoved
+## Get Involved
 You are welcome to contribute to this Open Solution. To get started:
 - Check issues to see if there is something you would like to contribute to.
 - Feel free to fork this repository or provide pull request.
