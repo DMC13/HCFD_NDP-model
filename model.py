@@ -173,7 +173,7 @@ class NDPModel(object):
     def generate_scores_array(self, input, score):
         """
         - input:    a NDPInput object.
-        - score:    a list of four numerical elements.
+        - score:    a list/tuple of four numerical elements.
                     四個數字，依序分別代表將夜勤安排於：
                     休假日、第一天班大夜救護、第一天班夜宿、前一天有班之日子，模型所獲得的分數
         """
@@ -189,12 +189,13 @@ class NDPModel(object):
                     scores_E[row, col] = dayoff
                 # 若今天有服勤、且前一天沒有夜勤
                 elif member_row[col] == 0:
-                    scores_D[row, col] = first_day
                     # 若此人前一天是輪休班
                     if input.squad[row] == input.shift_off[col]:
+                        scores_D[row, col] = (first_day + rotate_day) / 2
                         scores_E[row, col] = rotate_day
                         # 若此人前一天不是輪休班
                     else:
+                        scores_D[row, col] = first_day
                         scores_E[row, col] = first_day
                 # 若今天有服勤
                 else:
@@ -229,36 +230,36 @@ class NDPModel(object):
         self.M = 10000
 
         # Non-negative Slack Variables - one for each constraint
-        self.S_daysum_D = pulp.LpVariable.dicts(
+        self.S_daysum_D = LpVariable.dicts(
             's_daysum_d', ((d) for d in input.days), lowBound=0, cat='Continuous')
-        self.S_daysum_E = pulp.LpVariable.dicts(
+        self.S_daysum_E = LpVariable.dicts(
             's_daysum_e', ((d) for d in input.days), lowBound=0, cat='Continuous')
-        self.S_dayoff = pulp.LpVariable.dicts('s_dayoff',   ((
+        self.S_dayoff = LpVariable.dicts('s_dayoff', ((
             d, m) for d in input.days for m in input.members_id), lowBound=0, cat='Continuous')
-        self.S_memsum_D = pulp.LpVariable.dicts(
+        self.S_memsum_D = LpVariable.dicts(
             's_memsum_d', ((m) for m in input.members_id), lowBound=0, cat='Continuous')
-        self.S_memsum_E = pulp.LpVariable.dicts(
+        self.S_memsum_E = LpVariable.dicts(
             's_memsum_e', ((m) for m in input.members_id), lowBound=0, cat='Continuous')
-        self.S_in_2days = pulp.LpVariable.dicts('s_in_2days', ((
+        self.S_in_2days = LpVariable.dicts('s_in_2days', ((
             d, m) for d in input.days[:-1] for m in input.members_id), lowBound=0, cat='Continuous')
 
         # Basis variables (binary)
         # one for each variable & one for each constraint (& so slack)
-        self.B_D = pulp.LpVariable.dicts('B_d', ((d, m)
-                                                 for d in input.days for m in input.members_id), cat='Binary')
-        self.B_E = pulp.LpVariable.dicts('B_e', ((d, m)
-                                                 for d in input.days for m in input.members_id), cat='Binary')
-        self.B_S_daysum_D = pulp.LpVariable.dicts(
+        self.B_D = LpVariable.dicts(
+            'B_d', ((d, m) for d in input.days for m in input.members_id), cat='Binary')
+        self.B_E = LpVariable.dicts(
+            'B_e', ((d, m) for d in input.days for m in input.members_id), cat='Binary')
+        self.B_S_daysum_D = LpVariable.dicts(
             'B_s_daysum_d', ((d) for d in input.days), cat='Binary')
-        self.B_S_daysum_E = pulp.LpVariable.dicts(
+        self.B_S_daysum_E = LpVariable.dicts(
             'B_s_daysum_e', ((d) for d in input.days), cat='Binary')
-        self.B_S_dayoff = pulp.LpVariable.dicts(
+        self.B_S_dayoff = LpVariable.dicts(
             'B_s_dayoff',   ((d, m) for d in input.days for m in input.members_id), cat='Binary')
-        self.B_S_memsum_D = pulp.LpVariable.dicts(
+        self.B_S_memsum_D = LpVariable.dicts(
             'B_s_memsum_d', ((m) for m in input.members_id), cat='Binary')
-        self.B_S_memsum_E = pulp.LpVariable.dicts(
+        self.B_S_memsum_E = LpVariable.dicts(
             'B_s_memsum_e', ((m) for m in input.members_id), cat='Binary')
-        self.B_S_in_2days = pulp.LpVariable.dicts(
+        self.B_S_in_2days = LpVariable.dicts(
             'B_s_in_2days', ((d, m) for d in input.days[:-1] for m in input.members_id), cat='Binary')
 
         #################################

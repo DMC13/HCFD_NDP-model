@@ -21,7 +21,7 @@ class Config(object):
     # 0 -> quiet; 1 -> basic info; 2 -> details (noisy)
     verbose = 1
 
-    # score gainned respectively when assigning duties on
+    # score gained respectively when assigning duties on
     # dayoff, rotate_day, first_day, second_day
     score = (-1000000, 100, 5, -1000)
 
