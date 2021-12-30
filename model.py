@@ -26,9 +26,9 @@ class NDPInput(object):
     Input = NDPInput({your filepath}, {x_table}, {members_info}, {date_info}, {y})
 
     - num_dayoff:   an integer. 所有隊員、在此月的總放假日數 
-    - members_id:   a list of integers. 隊員的番號
+    - members_id:   a list/tuple of integers. 隊員的番號
     - n_members:    an integer. 隊員數量
-    - days:         a list of integers. 日期
+    - days:         a list/tuple of integers. 日期
     - n_days:       an integer. 本月天數
     """
 
@@ -187,17 +187,17 @@ class NDPModel(object):
                 if status == 0:
                     scores_D[row, col] = dayoff
                     scores_E[row, col] = dayoff
-                # 若今天有服勤、且前一天沒有夜勤
+                # 若今天有服勤、且前一天沒有服勤
                 elif member_row[col] == 0:
-                    # 若此人前一天是輪休班
+                    # 若前一天是輪休班
                     if input.squad[row] == input.shift_off[col]:
                         scores_D[row, col] = (first_day + rotate_day) / 2
                         scores_E[row, col] = rotate_day
-                        # 若此人前一天不是輪休班
+                    # 若前一天不是輪休班
                     else:
                         scores_D[row, col] = first_day
                         scores_E[row, col] = first_day
-                # 若今天有服勤
+                # 若這天有服勤、且前一天有服勤
                 else:
                     scores_D[row, col] = second_day
                     scores_E[row, col] = second_day
@@ -480,4 +480,6 @@ class NDPModel(object):
                     print(
                         f'\n\nProcess ended with early stopping.\nSaved best top {bests.last_ind +1} solutions.{stopped_at}') if config.verbose else ""
                     return bests
+        print(
+            f'\n\nProcess ended after {config.max_iter} iterations.\nSaved best top {bests.last_ind +1} solutions.') if config.verbose else ""
         return bests
