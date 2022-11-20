@@ -6,6 +6,7 @@ Copyright (c) 2021 Tao-Ming Chen.
 Licensed under the LGPL-2.1 License (see LICENSE for details)
 """
 
+
 import os
 import numpy as np
 import pandas as pd
@@ -66,7 +67,7 @@ class NDPconfig(config.Config):
 
 # Input File
 IN_COLAB = fio.detect_colab()
-input_file = args.file_path if args.file_path else None
+input_file = args.file_path or None
 filename = fio.input_file(filename=input_file)
 
 # Prepare Model Input

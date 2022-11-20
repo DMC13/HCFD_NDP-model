@@ -21,7 +21,7 @@ def detect_colab():
     try:
         import google.colab
         IN_COLAB = True
-    except:
+    except Exception:
         IN_COLAB = False
     return IN_COLAB
 
@@ -63,5 +63,4 @@ def solutions2excel(input, bests):
 if __name__ == '__main__':
     IN_COLAB = detect_colab()
     not_string = 'NOT '
-    print(
-        f'this file is {not_string if not IN_COLAB else ""}running in Colab.')
+    print(f'this file is {"" if IN_COLAB else not_string}running in Colab.')

@@ -62,23 +62,22 @@ class NDPInput(object):
 
 
 class AnOptimal(object):
-    def __init__(self, var_min, var_max, var_mean, D, E):
+    def __init__(self, D, E, var_min, var_max, var_mean, var_second_day):
+        self.solution = copy.deepcopy(D), copy.deepcopy(E)
         self.var_min = var_min
         self.var_max = var_max
         self.var_mean = var_mean
-        self.solution = tuple([copy.deepcopy(D), copy.deepcopy(E)])
+        self.var_second_day = var_second_day
 
     def compare(self, bests):
-        # links to BestOpitmals.compare_with_bests(AnOptimal)
-        compare_result = bests.compare_with_bests(self)
-        return compare_result
+        return bests.compare_with_bests(self)
 
 
 class BestOptimals(object):
     def __init__(self, size_lim=5, verbose=False):
         self.size_lim = size_lim
         self.last_ind = -1
-        self.best_k = list()
+        self.best_k = []
         self.verbose = verbose
 
     def update_bests(self, new_optimal, insert_at):
@@ -128,26 +127,18 @@ class BestOptimals(object):
         # else, compare with the other best optimals
         else:
             to_compare = self.best_k[compare_with]
-            # var_min
-            if new_optimal.var_min > to_compare.var_min:
+            if (new_optimal.var_second_day < to_compare.var_second_day) \
+                or (new_optimal.var_second_day == to_compare.var_second_day
+                    and new_optimal.var_min > to_compare.var_min) \
+                or (new_optimal.var_second_day == to_compare.var_second_day
+                    and new_optimal.var_min == to_compare.var_min
+                    and new_optimal.var_max < to_compare.var_max) \
+                or (new_optimal.var_second_day == to_compare.var_second_day
+                    and new_optimal.var_min == to_compare.var_min
+                    and new_optimal.var_max == to_compare.var_max
+                    and new_optimal.var_mean < to_compare.var_mean):
                 has_updated = self.compare_with_bests(
                     new_optimal, (compare_with-1))
-            elif new_optimal.var_min == to_compare.var_min:
-                # var_max
-                if new_optimal.var_max < to_compare.var_max:
-                    has_updated = self.compare_with_bests(
-                        new_optimal, (compare_with-1))
-                elif new_optimal.var_max == to_compare.var_max:
-                    # var_mean
-                    if new_optimal.var_mean < to_compare.var_mean:
-                        has_updated = self.compare_with_bests(
-                            new_optimal, (compare_with-1))
-                    else:
-                        has_updated = self.update_bests(
-                            new_optimal, compare_with+1)
-                else:
-                    has_updated = self.update_bests(
-                        new_optimal, compare_with+1)
             else:
                 has_updated = self.update_bests(new_optimal, compare_with+1)
         return has_updated
@@ -179,6 +170,8 @@ class NDPModel(object):
         """
         scores_D = np.zeros((input.n_members, input.n_days), dtype='int32')
         scores_E = np.zeros((input.n_members, input.n_days), dtype='int32')
+        arr_second_day = np.zeros(
+            (input.n_members, input.n_days), dtype='int32')
         dayoff, rotate_day, first_day, second_day = score
 
         for row, member_row in enumerate(input.x_table):
@@ -201,8 +194,10 @@ class NDPModel(object):
                 else:
                     scores_D[row, col] = second_day
                     scores_E[row, col] = second_day
+                    arr_second_day[row, col] = 1
 
         self.scores_D, self.scores_E = scores_D, scores_E
+        self.arr_second_day = arr_second_day
 
     def build(self, input):
         """
@@ -274,17 +269,17 @@ class NDPModel(object):
 
         # 每日一個值宿
         for d in input.days:
-            LPmodel += lpSum(self.D[d, m] for m in input.members_id) + \
-                self.S_daysum_D[d] == 1, ("a D a day < "+str(d))
-            LPmodel += lpSum(self.D[d, m] for m in input.members_id) - \
-                self.S_daysum_D[d] == 1, ("a D a day > "+str(d))
+            LPmodel += (lpSum(self.D[d, m] for m in input.members_id) +
+                        self.S_daysum_D[d] == 1, f"a D a day < {str(d)}")
+            LPmodel += (lpSum(self.D[d, m] for m in input.members_id) -
+                        self.S_daysum_D[d] == 1, f"a D a day > {str(d)}")
 
         # 每日兩個大夜救護
         for d in input.days:
-            LPmodel += lpSum(self.E[d, m] for m in input.members_id) + \
-                self.S_daysum_E[d] == 2, ("two E a day < "+str(d))
-            LPmodel += lpSum(self.E[d, m] for m in input.members_id) - \
-                self.S_daysum_E[d] == 2, ("two E a day > "+str(d))
+            LPmodel += (lpSum(self.E[d, m] for m in input.members_id) +
+                        self.S_daysum_E[d] == 2, f"two E a day < {str(d)}")
+            LPmodel += (lpSum(self.E[d, m] for m in input.members_id) -
+                        self.S_daysum_E[d] == 2, f"two E a day > {str(d)}")
 
         # 休假日不可排夜勤
         for d in input.days:
@@ -375,13 +370,23 @@ class NDPModel(object):
 
             return weight[0]*var_D + weight[1]*var_E
 
+    def calculate_var_second_day(self, dates_of_D, dates_of_E, arr_second_day):
+        n_members = arr_second_day.shape[0]
+        num_second_day = np.zeros(n_members)
+        for m, (d_D, d_E) in enumerate(zip(dates_of_D, dates_of_E)):
+            for dD in d_D:
+                num_second_day[m] += 1 if arr_second_day[m, dD] == 1 else 0
+            for dE in d_E:
+                num_second_day[m] += 1 if arr_second_day[m, dE] == 1 else 0
+        return num_second_day.var()
+
     def evaluate_result(self, input, config):
         """
         caculate the variance value of each member,
         than find the min, max, mean of the variance values.
         """
         dates_of_D, dates_of_E = self.get_dates_of_DE(input)
-        variance = list()
+        variance = []
         for date_D, date_E in zip(dates_of_D, dates_of_E):
             var = self.calculate_variance(
                 date_D, date_E, config.variance_weight)
@@ -389,10 +394,12 @@ class NDPModel(object):
                 variance.append(var)
         var_min, var_max, var_mean = min(variance), max(
             variance), sum(variance)/len(variance)
+        var_second_day = self.calculate_var_second_day(
+            dates_of_D, dates_of_E, self.arr_second_day)
         if config.verbose > 1:
             print(
                 f'\t-> variance score:\tmin: {var_min:.2f}\tmax: {var_max:.2f}\tmean: {var_mean:.2f}')
-        return var_min, var_max, var_mean
+        return var_min, var_max, var_mean, var_second_day
 
     #################################
     #   求解引擎
@@ -406,7 +413,7 @@ class NDPModel(object):
         config = self.config
         bests = BestOptimals(config.result_size, config.verbose)
 
-        found_optimals = list()
+        found_optimals = []
         since_last_new_optimal = 0
 
         print("\nSolving night duty problem...\n") if config.verbose else ""
@@ -425,7 +432,7 @@ class NDPModel(object):
                         f'\n#{iter} {pulp.LpStatus[model.status]}\tObjective: {pulp.value(model.objective)}') if config.verbose > 1 else ""
 
                     if pulp.LpStatus[model.status] == 'Optimal':
-                        vars, optimal = list(), list()
+                        vars, optimal = [], []
 
                         # parse the optimal value of current iteration
                         for v in model.variables():
@@ -445,13 +452,13 @@ class NDPModel(object):
                                 f'\t-> new optimal !\t# {len(found_optimals)}') if config.verbose > 1 else ""
 
                             # evaluate this optimal, and update early_stopping
-                            evaluate_min_var, evaluate_max_var, evaluate_mean = self.evaluate_result(
+                            evaluate_min_var, evaluate_max_var, evaluate_mean, evaluate_var_seoncd_day = self.evaluate_result(
                                 self.input, self.config)
                             print(
                                 f'\t-> worst score:\tmin_variance: {evaluate_min_var:.3f}\tmax_variance: {evaluate_max_var:.3f}\tmean of variance: {evaluate_mean:.3f}') if config.verbose > 1 else ""
 
                             solution = AnOptimal(
-                                evaluate_min_var, evaluate_max_var, evaluate_mean, self.D, self.E)
+                                self.D, self.E, evaluate_min_var, evaluate_max_var, evaluate_mean, evaluate_var_seoncd_day)
                             compare_result = solution.compare(bests)
 
                             # if this new optimal is one of the bests,

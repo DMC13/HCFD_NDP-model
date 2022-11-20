@@ -93,7 +93,7 @@ def solution_to_df(input, D, E):
     - D:        model.bests.best_k[i].solution[0]
     - E:        model.bests.best_k[i].solution[1]
     """
-    duty, night = list(), list()
+    duty, night = [], []
     output_table = np.where(input.x_table > 0, 'v', '')
 
     for col, d in enumerate(input.days):
@@ -105,9 +105,9 @@ def solution_to_df(input, D, E):
                 output_table[row, col+1] = '救'
                 night.append(m)
 
-    output_short = [duty]
-    output_short.append([m for i, m in enumerate(night) if i % 2 == 0])
-    output_short.append([m for i, m in enumerate(night) if i % 2 == 1])
+    output_short = [duty,
+                    [m for i, m in enumerate(night) if i % 2 == 0],
+                    [m for i, m in enumerate(night) if i % 2 == 1]]
 
     df_result = pd.DataFrame(
         data=output_table, columns=[0]+list(input.days), index=input.members_id)
