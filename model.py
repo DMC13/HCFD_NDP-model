@@ -375,9 +375,9 @@ class NDPModel(object):
         num_second_day = np.zeros(n_members)
         for m, (d_D, d_E) in enumerate(zip(dates_of_D, dates_of_E)):
             for dD in d_D:
-                num_second_day[m] += 1 if arr_second_day[m, dD] == 1 else 0
+                num_second_day[m] += 1 if arr_second_day[m, dD-1] == 1 else 0
             for dE in d_E:
-                num_second_day[m] += 1 if arr_second_day[m, dE] == 1 else 0
+                num_second_day[m] += 1 if arr_second_day[m, dE-1] == 1 else 0
         return num_second_day.var()
 
     def evaluate_result(self, input, config):
