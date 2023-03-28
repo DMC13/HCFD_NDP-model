@@ -221,7 +221,7 @@ class NDPModel(object):
 
         # Parameters for controlling the behaviour of basic variables
         self.nb = len(input.days)*4 + len(input.members_id)*4 + input.num_dayoff * \
-            2 + len(input.days[:-1])*len(input.members_id)
+            2  # + len(input.days[:-1])*len(input.members_id)
         self.M = 10000
 
         # Non-negative Slack Variables - one for each constraint
@@ -235,8 +235,8 @@ class NDPModel(object):
             's_memsum_d', ((m) for m in input.members_id), lowBound=0, cat='Continuous')
         self.S_memsum_E = LpVariable.dicts(
             's_memsum_e', ((m) for m in input.members_id), lowBound=0, cat='Continuous')
-        self.S_in_2days = LpVariable.dicts('s_in_2days', ((
-            d, m) for d in input.days[:-1] for m in input.members_id), lowBound=0, cat='Continuous')
+        # self.S_in_2days = LpVariable.dicts('s_in_2days', ((
+        #     d, m) for d in input.days[:-1] for m in input.members_id), lowBound=0, cat='Continuous')
 
         # Basis variables (binary)
         # one for each variable & one for each constraint (& so slack)
@@ -254,8 +254,8 @@ class NDPModel(object):
             'B_s_memsum_d', ((m) for m in input.members_id), cat='Binary')
         self.B_S_memsum_E = LpVariable.dicts(
             'B_s_memsum_e', ((m) for m in input.members_id), cat='Binary')
-        self.B_S_in_2days = LpVariable.dicts(
-            'B_s_in_2days', ((d, m) for d in input.days[:-1] for m in input.members_id), cat='Binary')
+        # self.B_S_in_2days = LpVariable.dicts(
+        # 'B_s_in_2days', ((d, m) for d in input.days[:-1] for m in input.members_id), cat='Binary')
 
         #################################
         #   目標式：最大化得分
@@ -290,10 +290,10 @@ class NDPModel(object):
                     LPmodel += self.D[d, m]+self.E[d, m] - self.S_dayoff[d,
                                                                          m] == 0, ("dayoff > "+str(d)+"-"+str(m))
         # 每人每兩日最多只能一次夜勤
-        for d in input.days[:-1]:
-            for m in input.members_id:
-                LPmodel += self.D[d, m]+self.E[d, m]+self.D[d+1, m]+self.E[d+1, m] + \
-                    self.S_in_2days[d, m] == 1, ("in 2days "+str(d)+"-"+str(m))
+        # for d in input.days[:-1]:
+        #     for m in input.members_id:
+        #         LPmodel += self.D[d, m]+self.E[d, m]+self.D[d+1, m]+self.E[d+1, m] + \
+        #             self.S_in_2days[d, m] == 1, ("in 2days "+str(d)+"-"+str(m))
 
         # 本月每個人的目標天數
         for ind_m, m in enumerate(input.members_id):
@@ -309,7 +309,7 @@ class NDPModel(object):
         # No. of basics is correct:
         LPmodel += lpSum(self.B_D) + lpSum(self.B_E) + lpSum(self.B_S_daysum_D) + lpSum(self.B_S_daysum_E) + \
             lpSum(self.B_S_dayoff) + lpSum(self.B_S_memsum_D) + \
-            lpSum(self.B_S_memsum_E) + lpSum(self.B_S_in_2days) == self.nb
+            lpSum(self.B_S_memsum_E) == self.nb  # + lpSum(self.B_S_in_2days)
         # Enforce basic and non-basic behaviour
         for i in self.D:
             LPmodel += self.D[i] <= self.M*self.B_D[i]
@@ -325,8 +325,8 @@ class NDPModel(object):
             LPmodel += self.S_memsum_D[i] <= self.M*self.B_S_memsum_D[i]
         for i in self.S_memsum_E:
             LPmodel += self.S_memsum_E[i] <= self.M*self.B_S_memsum_E[i]
-        for i in self.S_in_2days:
-            LPmodel += self.S_in_2days[i] <= self.M*self.B_S_in_2days[i]
+        # for i in self.S_in_2days:
+        #     LPmodel += self.S_in_2days[i] <= self.M*self.B_S_in_2days[i]
 
         self.LPmodel = LPmodel
 
